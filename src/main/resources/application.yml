@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  # Render 等 PaaS 会通过 PORT 环境变量指定监听端口；本地/Docker Compose 回落到 8080
+  port: ${PORT:8080}
   servlet:
     encoding:
       charset: UTF-8
@@ -23,15 +24,20 @@ spring:
 # AI configuration - supports any OpenAI-compatible API
 ai:
   base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-  api-key: ${AI_API_KEY:sk-ws-H.ERRRDEX.a5CD.MEUCICpeKXQZPdYa-b6iZBi6xGwormu_75viIxWkltZDPpc5AiEA8hf7LjT9DDxQ8ChrGU8NiwPVJ6jTOzJjiQCxi0-T-Vw}
+  api-key: ${AI_API_KEY:}
   model: ${AI_MODEL:qwen3.7-max}
   temperature: ${AI_TEMPERATURE:0.7}
   max-tokens: ${AI_MAX_TOKENS:16384}
   timeout: ${AI_TIMEOUT:300000}
   think: ${AI_THINK:false}
 
-# Storage configuration - FTP only
+# Storage configuration
+# type=ftp   使用外部 FTP 服务器（默认，保持既有部署行为不变）
+# type=local 读写本地文件系统，无外部依赖；容器平台上需将 base-dir 指向持久化磁盘
 storage:
+  type: ${STORAGE_TYPE:ftp}
+  local:
+    base-dir: ${STORAGE_LOCAL_DIR:./data/skills}
   ftp:
     host: ${FTP_HOST:localhost}
     port: ${FTP_PORT:21}

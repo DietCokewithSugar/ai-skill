@@ -1,10 +1,12 @@
 # ============================================================
 # Backend Dockerfile - Spring Boot AI Skill Orchestration
-# Multi-stage build: Maven build → JRE 8 runtime
+# Multi-stage build: Maven build → JRE 8 runtime (含 Python 3)
 # ============================================================
 
 # ---------- Stage 1: Build ----------
-FROM maven:3.8-openjdk-8 AS builder
+# 使用 eclipse-temurin 系列镜像：官方 openjdk:8 镜像已停止维护，
+# 其 Debian buster 软件源已归档，apt-get update 会 404
+FROM maven:3.9-eclipse-temurin-8 AS builder
 WORKDIR /build
 
 # 先复制 pom.xml，利用 Docker 层缓存加速依赖下载
@@ -16,25 +18,42 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # ---------- Stage 2: Runtime ----------
-FROM openjdk:8-jre-slim
+# jammy (Ubuntu 22.04) 基础镜像：apt 源可用，且其 pip 22.x 不启用 PEP 668
+# 外部管理限制，技能执行时的 `pip install` 才能正常写入系统 site-packages
+FROM eclipse-temurin:8-jre-jammy
 
 WORKDIR /app
 
 # 设置时区为 Asia/Shanghai
 ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 运行时依赖：
+#   python3 / python3-pip — ExecutionService 执行技能脚本并自动安装依赖
+#   curl                  — HEALTHCHECK 使用
+#   tzdata                — 时区数据
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        curl \
+        tzdata \
+        ca-certificates \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
 
 # 复制构建产物
 COPY --from=builder /build/target/*.jar app.jar
 
-# 暴露端口
+# 暴露端口（本地/Compose 使用；Render 会通过 PORT 环境变量覆盖）
 EXPOSE 8080
 
 # JVM 参数
 ENV JAVA_OPTS="-Xms256m -Xmx512m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai"
 
-# 健康检查
+# 健康检查（Render 使用自身的 Health Check Path，此处仅对本地 Docker 生效）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/ || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
