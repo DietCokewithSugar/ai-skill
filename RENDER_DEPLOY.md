@@ -19,10 +19,34 @@
 | Docker Build Context Directory | `.` | |
 | Docker Command | 留空 | 使用 Dockerfile 的 `ENTRYPOINT` |
 | Health Check Path | `/` | 根路径由 `static/index.html` 提供 |
-| Instance Type | `Standard` (2GB) 起 | 512MB 实例上 JVM + pip 安装依赖会 OOM |
+| Instance Type | `Starter` (512MB) | 够用，但**必须显式设置 `JAVA_OPTS`**，见下方内存预算 |
 
 端口无需手动配置：应用读取 Render 注入的 `PORT`（`application.yml` 中为 `${PORT:8080}`），
 本地和 Docker Compose 下仍回落到 8080。
+
+### Starter 实例的内存预算
+
+Starter 为 512MB / 0.5 CPU。**Dockerfile 里的默认值是 `-Xmx512m`，会把整个实例占满，
+不给技能执行的 python3 子进程留任何余量**，因此必须覆盖 `JAVA_OPTS`（`render.yaml` 已配置）：
+
+```
+-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC \
+-XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai
+```
+
+| 参数 | 作用 |
+|---|---|
+| `-Xmx256m` | 堆上限。本项目以 I/O 为主，堆需求很低 |
+| `-XX:MaxMetaspaceSize=128m` | 限制元空间无上限增长 |
+| `-XX:+UseSerialGC` | 0.5 CPU 上比 G1 开销更低、占用更小 |
+| `-XX:+ExitOnOutOfMemoryError` | OOM 时直接退出由 Render 重启，避免进程僵死 |
+
+实测（本地 JDK 21，生产为 JDK 8，量级参考）：启动后 JVM 常驻约 182MB，
+跑完上传/列表/读取后约 190MB，余下约 320MB 供 python3 子进程与 `pip install` 使用。
+
+内存吃紧时优先注意两处：`pip install` 大体积依赖（如科学计算类 wheel）峰值可能超过 200MB；
+技能产出二进制文件时会整份读入堆再做 Base64 编码（`ExecutionService.java:904`），
+大文件产出建议控制在几十 MB 以内。Maven 构建跑在 Render 的构建机上，不受实例规格限制。
 
 ## 二、存储后端二选一
 
@@ -41,7 +65,7 @@ STORAGE_LOCAL_DIR = /var/data/skills
 |---|---|
 | Name | `skill-data` |
 | Mount Path | `/var/data` |
-| Size | 5 GB（按需调整） |
+| Size | 1 GB（可扩不可缩，按需调整） |
 
 **代价与限制：**
 
@@ -92,6 +116,7 @@ FTP_BASE_DIR = /skills
 ## 四、已知限制
 
 - **免费实例**：15 分钟无请求即休眠，冷启动需数十秒；且不支持持久化磁盘。
+  Starter 及以上不休眠。
 - **请求超时**：`AI_TIMEOUT` 默认 5 分钟，而 Render 网关对单个 HTTP 请求有超时限制，
   长耗时的同步调用可能在网关侧被切断。
 - **技能执行的临时文件**：使用系统临时目录，实例重启后丢失；技能本体与产物落在存储后端上。

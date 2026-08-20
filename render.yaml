@@ -8,8 +8,9 @@ services:
   - type: web
     name: ai-skill
     runtime: docker
-    # free/starter 只有 512MB 内存，JVM + Python 依赖安装会 OOM，建议 standard 起
-    plan: standard
+    # starter = 512MB / 0.5 CPU。JVM 参数已按此规格调优（见下方 JAVA_OPTS），
+    # 实测 JVM 常驻约 190MB，余下约 320MB 供技能执行的 python3 子进程使用
+    plan: starter
     region: singapore
     branch: main
     dockerfilePath: ./Dockerfile.backend
@@ -19,9 +20,14 @@ services:
 
     envVars:
       # ---------- JVM ----------
-      # 需与 plan 的内存匹配：standard(2GB) 可用 -Xmx1024m；若降到 512MB 实例请改为 -Xmx320m
+      # 按 starter(512MB/0.5CPU) 调优，务必显式设置——Dockerfile 的默认值 -Xmx512m
+      # 会占满整个实例，不给 python3 子进程留余量。
+      #   MaxMetaspaceSize  限制元空间无上限增长
+      #   UseSerialGC       0.5 CPU 上比 G1 开销更低、占用更小
+      #   ExitOnOutOfMemoryError  OOM 时直接退出，由 Render 自动重启，避免僵死
+      # 换用 2GB 及以上实例时可放宽为 -Xmx1024m。
       - key: JAVA_OPTS
-        value: "-Xms256m -Xmx1024m -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai"
+        value: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai"
 
       # ---------- AI 模型（OpenAI 兼容接口）----------
       - key: AI_BASE_URL
@@ -53,7 +59,8 @@ services:
     # 注意：持久化磁盘仅付费实例可用；未挂盘时容器文件系统是临时的，
     # 每次重新部署或实例重启都会丢失全部技能数据。
     # 挂盘后该服务无法多实例扩容，且部署时会有短暂停机。
+    # 容量后续可以扩，但不能缩，因此先给 1GB（技能多为文本与脚本，占用很小）。
     disk:
       name: skill-data
       mountPath: /var/data
-      sizeGB: 5
+      sizeGB: 1
