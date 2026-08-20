@@ -131,7 +131,7 @@ FTP_BASE_DIR = /skills
 
 ```
 AI_BASE_URL   = https://api.deepseek.com   # 不需要 /v1 后缀
-AI_MODEL      = deepseek-v4-pro            # 或 deepseek-v4-flash
+AI_MODEL      = deepseek-v4-flash          # 或 deepseek-v4-pro
 AI_THINK      = none
 AI_MAX_TOKENS = 8192
 ```

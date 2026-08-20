@@ -37,9 +37,9 @@ services:
       - key: AI_API_KEY
         sync: false          # 密钥：在控制台填写
       # 模型名，取值来自 DeepSeek API 的报错回执（传入非法名称时会列出支持的取值）。
-      # 另一可选值为 deepseek-v4-flash。注意不要把 base-url 填到这里。
+      # 另一可选值为 deepseek-v4-pro。注意不要把 base-url 填到这里。
       - key: AI_MODEL
-        value: deepseek-v4-pro
+        value: deepseek-v4-flash
       - key: AI_TEMPERATURE
         value: "0.7"
       # DeepSeek 的单次输出上限低于原先针对通义千问设置的 16384，
