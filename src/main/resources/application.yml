@@ -31,8 +31,13 @@ ai:
   timeout: ${AI_TIMEOUT:300000}
   think: ${AI_THINK:false}
 
-# Storage configuration - FTP only
+# Storage configuration
+# type=ftp   使用外部 FTP 服务器（默认，保持既有部署行为不变）
+# type=local 读写本地文件系统，无外部依赖；容器平台上需将 base-dir 指向持久化磁盘
 storage:
+  type: ${STORAGE_TYPE:ftp}
+  local:
+    base-dir: ${STORAGE_LOCAL_DIR:./data/skills}
   ftp:
     host: ${FTP_HOST:localhost}
     port: ${FTP_PORT:21}

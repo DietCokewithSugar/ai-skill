@@ -39,18 +39,21 @@ services:
       - key: AI_THINK
         value: "false"
 
-      # ---------- FTP 存储 ----------
-      # 必须指向一台 Render 可从公网访问的 FTP 服务器：
-      #   1) vsftpd 的 PASV_ADDRESS 要设为该服务器的公网 IP，否则被动模式握手失败
-      #   2) 防火墙/安全组需放行 21 端口与整个被动端口段
-      #   3) 公网 FTP 为明文传输，务必使用强密码，并尽量限制来源 IP
-      - key: FTP_HOST
-        sync: false
-      - key: FTP_PORT
-        sync: false
-      - key: FTP_USERNAME
-        sync: false
-      - key: FTP_PASSWORD
-        sync: false          # 密码：在控制台填写
-      - key: FTP_BASE_DIR
-        sync: false
+      # ---------- 存储 ----------
+      # 使用本地文件系统 + 下方挂载的持久化磁盘，不依赖任何外部服务器
+      - key: STORAGE_TYPE
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: /var/data/skills
+
+      # 如需改回外部 FTP：把 STORAGE_TYPE 设为 ftp，删除下方 disk 配置，
+      # 并补充 FTP_HOST / FTP_PORT / FTP_USERNAME / FTP_PASSWORD / FTP_BASE_DIR
+
+    # ---------- 持久化磁盘 ----------
+    # 注意：持久化磁盘仅付费实例可用；未挂盘时容器文件系统是临时的，
+    # 每次重新部署或实例重启都会丢失全部技能数据。
+    # 挂盘后该服务无法多实例扩容，且部署时会有短暂停机。
+    disk:
+      name: skill-data
+      mountPath: /var/data
+      sizeGB: 5
