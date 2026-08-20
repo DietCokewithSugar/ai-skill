@@ -127,9 +127,25 @@ FTP_BASE_DIR = /skills
 2. **`AI_MAX_TOKENS`**。默认值 16384 是针对通义千问设的，多数服务商的单次输出
    上限低于此值，超出会被服务端拒绝。换服务商时按其文档下调。
 
-`render.yaml` 中已按 DeepSeek 配置好（`AI_BASE_URL=https://api.deepseek.com`、
-`AI_THINK=none`、`AI_MAX_TOKENS=8192`）；`AI_MODEL` 与上限的确切取值请以
-[DeepSeek 官方文档](https://api-docs.deepseek.com/zh-cn/) 为准。
+`render.yaml` 中已按 DeepSeek 配置好：
+
+```
+AI_BASE_URL   = https://api.deepseek.com   # 不需要 /v1 后缀
+AI_MODEL      = deepseek-v4-flash          # 或 deepseek-v4-pro
+AI_THINK      = none
+AI_MAX_TOKENS = 8192
+```
+
+模型名取自 DeepSeek API 的报错回执：传入非法名称时，服务端会在 400 响应里列出
+当前支持的取值，这比查文档更直接。`AI_MAX_TOKENS` 的服务端上限尚未实测，
+若收到与之相关的 400 错误，按报错信息下调即可。
+
+**别把 base-url 填进 `AI_MODEL`。** 这两个变量在控制台里挨着，填反时的报错长这样：
+
+```
+400 Bad Request: The supported API model names are deepseek-v4-pro or
+deepseek-v4-flash, but you passed https://api.deepseek.com.
+```
 
 ## 四、已知限制
 
