@@ -30,20 +30,26 @@ services:
         value: "-Xms128m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Duser.timezone=Asia/Shanghai"
 
       # ---------- AI 模型（OpenAI 兼容接口）----------
+      # 代码会在 base-url 末尾自动追加 /chat/completions（AiService.java:80,198），
+      # 因此这里只填到域名即可，不要带 /chat/completions。
       - key: AI_BASE_URL
-        value: https://dashscope.aliyuncs.com/compatible-mode/v1
+        value: https://api.deepseek.com
       - key: AI_API_KEY
         sync: false          # 密钥：在控制台填写
       - key: AI_MODEL
-        sync: false          # 填你账号实际可用的模型名
+        sync: false          # 在控制台填写，取值请以 DeepSeek 官方文档为准
       - key: AI_TEMPERATURE
         value: "0.7"
+      # DeepSeek 的单次输出上限低于原先针对通义千问设置的 16384，
+      # 超过服务端上限会被直接拒绝；确切数值请以官方文档为准。
       - key: AI_MAX_TOKENS
-        value: "16384"
+        value: "8192"
       - key: AI_TIMEOUT
         value: "300000"
+      # think 是 Ollama / Qwen3 的非标准字段，OpenAI 规范中并不存在。
+      # 设为 none 表示完全不下发该字段，避免请求体校验较严的服务拒绝整个请求。
       - key: AI_THINK
-        value: "false"
+        value: "none"
 
       # ---------- 存储 ----------
       # 使用本地文件系统 + 下方挂载的持久化磁盘，不依赖任何外部服务器

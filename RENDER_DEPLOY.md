@@ -102,16 +102,34 @@ FTP_BASE_DIR = /skills
 
 ## 三、其余环境变量
 
-| Key | 是否必填 | 默认值 | 说明 |
+| Key | 是否必填 | 代码默认值 | 说明 |
 |---|---|---|---|
 | `AI_API_KEY` | ✅ | 空 | OpenAI 兼容接口密钥，设为 Secret |
-| `AI_BASE_URL` | | DashScope 兼容端点 | 任意 OpenAI 兼容端点 |
-| `AI_MODEL` | ✅ | `qwen3.7-max` | 填账号实际可用的模型名 |
+| `AI_BASE_URL` | | DashScope 兼容端点 | 只填到域名，**不要带 `/chat/completions`** |
+| `AI_MODEL` | ✅ | `qwen3.7-max` | 填服务商实际可用的模型名 |
 | `AI_TEMPERATURE` | | `0.7` | |
-| `AI_MAX_TOKENS` | | `16384` | |
+| `AI_MAX_TOKENS` | | `16384` | 不得超过服务端的单次输出上限 |
 | `AI_TIMEOUT` | | `300000` | 单位毫秒 |
-| `AI_THINK` | | `false` | 推理模型是否启用思考模式 |
+| `AI_THINK` | | `false` | `true`/`false` 会下发 `think` 字段；其他值（如 `none`）则不下发 |
 | `JAVA_OPTS` | | 见 Dockerfile | 需与实例内存匹配 |
+
+### 换用其他 OpenAI 兼容服务商
+
+代码会把 `AI_BASE_URL` 末尾的斜杠去掉后追加 `/chat/completions`
+（`AiService.java:80,198`），所以 `AI_BASE_URL` 只填到域名或版本前缀即可。
+
+切换服务商时有两处容易踩坑：
+
+1. **`think` 字段**。这是 Ollama / Qwen3 的非标准扩展，OpenAI 规范里并不存在。
+   `AI_THINK` 取 `true` 或 `false` 时都会把该字段放进请求体；请求体校验较严的服务
+   会因无法识别的字段直接拒绝整个请求。此时把 `AI_THINK` 设为 `none`（或任意
+   非布尔值），该字段就完全不会出现在请求里。
+2. **`AI_MAX_TOKENS`**。默认值 16384 是针对通义千问设的，多数服务商的单次输出
+   上限低于此值，超出会被服务端拒绝。换服务商时按其文档下调。
+
+`render.yaml` 中已按 DeepSeek 配置好（`AI_BASE_URL=https://api.deepseek.com`、
+`AI_THINK=none`、`AI_MAX_TOKENS=8192`）；`AI_MODEL` 与上限的确切取值请以
+[DeepSeek 官方文档](https://api-docs.deepseek.com/zh-cn/) 为准。
 
 ## 四、已知限制
 

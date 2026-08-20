@@ -43,8 +43,16 @@ public class AiConfig {
     /** 请求超时时间（毫秒） */
     private Integer timeout;
 
-    /** 是否启用思考模式（深度推理模式） */
-    private Boolean think;
+    /**
+     * 是否启用思考模式（深度推理模式）。
+     * <p>
+     * 取值 {@code "true"} / {@code "false"} 时，会作为非标准的 {@code think} 字段
+     * 下发给模型服务（Ollama、Qwen3 等推理模型支持该字段）。取其他任意值
+     * （如空字符串或 {@code none}）则完全不下发该字段 —— 部分 OpenAI 兼容服务
+     * 会拒绝无法识别的请求字段，此时需要将其关闭。
+     * </p>
+     */
+    private String think;
 
     /**
      * 创建并配置 RestTemplate Bean。
