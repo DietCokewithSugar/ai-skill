@@ -94,9 +94,10 @@ public class AiService {
             }
 
             // 支持 Ollama 的 "think" 参数，用于推理模型（如 Qwen3）
-            // 当 think=false 时，禁用推理以获得更快的响应速度
-            if (aiConfig.getThink() != null) {
-                requestBody.put("think", aiConfig.getThink());
+            // 当 think=false 时，禁用推理以获得更快的响应速度；
+            // 配置为其他值（如空或 none）时完全不下发，兼容拒绝未知字段的服务
+            if (shouldSendThink()) {
+                requestBody.put("think", Boolean.parseBoolean(aiConfig.getThink()));
             }
 
             // 构建 messages 数组
@@ -206,8 +207,8 @@ public class AiService {
             } else if (aiConfig.getMaxTokens() != null) {
                 requestBody.put("max_tokens", aiConfig.getMaxTokens());
             }
-            if (aiConfig.getThink() != null) {
-                requestBody.put("think", aiConfig.getThink());
+            if (shouldSendThink()) {
+                requestBody.put("think", Boolean.parseBoolean(aiConfig.getThink()));
             }
 
             ArrayNode messages = requestBody.putArray("messages");
@@ -570,5 +571,20 @@ public class AiService {
         return aiConfig.getApiKey() != null
                 && !aiConfig.getApiKey().trim().isEmpty()
                 && !aiConfig.getApiKey().equals("sk-your-api-key-here");
+    }
+
+    /**
+     * 判断是否应当向模型服务下发非标准的 {@code think} 字段。
+     *
+     * <p>仅当 {@code ai.think} 配置为 {@code "true"} 或 {@code "false"} 时才下发。
+     * 配置为空字符串、{@code none} 等其他值时返回 {@code false}，此时请求体中
+     * 不含该字段 —— 部分 OpenAI 兼容服务（请求体校验较严的实现）会因无法识别的
+     * 字段直接拒绝请求。</p>
+     *
+     * @return 需要下发 {@code think} 字段时返回 {@code true}
+     */
+    private boolean shouldSendThink() {
+        String think = aiConfig.getThink();
+        return "true".equalsIgnoreCase(think) || "false".equalsIgnoreCase(think);
     }
 }

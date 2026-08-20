@@ -29,6 +29,8 @@ ai:
   temperature: ${AI_TEMPERATURE:0.7}
   max-tokens: ${AI_MAX_TOKENS:16384}
   timeout: ${AI_TIMEOUT:300000}
+  # true / false 会作为非标准的 think 字段下发（Ollama、Qwen3 等推理模型支持）；
+  # 设为其他值（如 none）则完全不下发 —— 请求体校验较严的服务会拒绝未知字段
   think: ${AI_THINK:false}
 
 # Storage configuration
